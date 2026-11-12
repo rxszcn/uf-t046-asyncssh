@@ -77,6 +77,32 @@ class _TestConfig(TempDirTestCase):
         config = self._parse_config('Compression yes\nCompression no')
         self.assertEqual(config.get('Compression'), True)
 
+    def test_set_pubkey_auth(self):
+        """Test PubkeyAuthentication config option value matrix"""
+
+        for value, result in (('yes', True), ('no', False),
+                              ('unbound', True), ('host-bound', True),
+                              ('true', True), ('false', False),
+                              ('YES', True), ('UNBOUND', True),
+                              ('Host-Bound', True)):
+            config = self._parse_config(f'PubkeyAuthentication {value}')
+            self.assertIsInstance(config.get('PubkeyAuthentication'), bool)
+            self.assertEqual(config.get('PubkeyAuthentication'), result)
+
+        # First value wins: a later "no" after an enable is ignored.
+        config = self._parse_config('PubkeyAuthentication yes\n'
+                                    'PubkeyAuthentication no')
+        self.assertEqual(config.get('PubkeyAuthentication'), True)
+
+        config = self._parse_config('PubkeyAuthentication host-bound\n'
+                                    'PubkeyAuthentication no')
+        self.assertEqual(config.get('PubkeyAuthentication'), True)
+
+        for value in ('xxx', 'maybe'):
+            with self.subTest(value):
+                with self.assertRaises(asyncssh.ConfigParseError):
+                    self._parse_config(f'PubkeyAuthentication {value}')
+
     def test_set_int(self):
         """Test integer config option"""
 

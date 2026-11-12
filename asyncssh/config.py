@@ -278,6 +278,32 @@ class SSHConfig:
         if option not in self._options:
             self._options[option] = value
 
+    def _set_pubkey_auth(self, option: str, args: List[str]) -> None:
+        """Set the PubkeyAuthentication config option
+
+           Recent versions of OpenSSH extend PubkeyAuthentication beyond
+           a simple boolean, accepting "unbound" and "host-bound" in
+           addition to "yes" and "no". The bound variants only affect
+           how keys are presented to the server; asyncssh does not
+           implement that distinction, so both enable public key
+           authentication just like "yes". An explicit "no" still
+           disables it. The result is stored as a boolean so that the
+           connection logic is unaffected.
+
+        """
+
+        value_str = args.pop(0).lower()
+
+        if value_str in ('yes', 'true', 'unbound', 'host-bound'):
+            value = True
+        elif value_str in ('no', 'false'):
+            value = False
+        else:
+            self._error(f'Invalid {option} value: {value_str}')
+
+        if option not in self._options:
+            self._options[option] = value
+
     def _set_int(self, option: str, args: List[str]) -> None:
         """Set an integer config option"""
 
@@ -676,7 +702,7 @@ class SSHClientConfig(SSHConfig):
         ('Port',                            SSHConfig._set_int),
         ('ProxyCommand',                    SSHConfig._set_string),
         ('ProxyJump',                       SSHConfig._set_string),
-        ('PubkeyAuthentication',            SSHConfig._set_bool),
+        ('PubkeyAuthentication',            SSHConfig._set_pubkey_auth),
         ('RekeyLimit',                      SSHConfig._set_rekey_limits),
         ('RemoteCommand',                   SSHConfig._set_string),
         ('RequestTTY',                      _set_request_tty),
@@ -777,7 +803,7 @@ class SSHServerConfig(SSHConfig):
         ('PasswordAuthentication',          SSHConfig._set_bool),
         ('PermitTTY',                       SSHConfig._set_bool),
         ('Port',                            SSHConfig._set_int),
-        ('PubkeyAuthentication',            SSHConfig._set_bool),
+        ('PubkeyAuthentication',            SSHConfig._set_pubkey_auth),
         ('RekeyLimit',                      SSHConfig._set_rekey_limits),
         ('TCPKeepAlive',                    SSHConfig._set_bool),
         ('UseDNS',                          SSHConfig._set_bool)
